@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <title>IDIF BOLIVIA</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  <script>
+    window.addEventListener('error', function (e) {
+      document.body.innerHTML += '<div style="color:red; background:white; padding:20px; z-index:9999; position:absolute; top:0; left:0; width:100%; white-space:pre-wrap; border: 2px solid red;"><b>Error:</b> ' + e.message + '<br><b>Source:</b> ' + e.filename + ':' + e.lineno + '<br><b>Stack:</b> ' + (e.error ? e.error.stack : '') + '</div>';
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      document.body.innerHTML += '<div style="color:red; background:white; padding:20px; z-index:9999; position:absolute; top:0; left:0; width:100%; white-space:pre-wrap; border: 2px solid red;"><b>Unhandled Promise Rejection:</b> ' + e.reason + '</div>';
+    });
+  </script>
+</body>
+
+</html>

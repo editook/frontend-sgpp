@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Basic Tailwind settings if needed */
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+  --color-indigo-700: #4338ca;
+  --color-secondary-500: #10b981;
+}
+
+@layer base {
+  :root {
+    @apply bg-gray-50 text-gray-800 font-sans antialiased;
+  }
+}
+
+/* Glassmorphism custom classes */
+.glass-panel {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
+}
