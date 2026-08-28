@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -10,13 +10,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!token) {
     return <Navigate to="/login" replace />;
   }
-  // TODO: Verify token expiration and roles if needed here or in layout
   return <Layout>{children}</Layout>;
 }
 
 export default function App() {
   return (
-    <BrowserRouter basename="/gestion-pericial">
+    <HashRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
@@ -45,6 +44,6 @@ export default function App() {
         />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
