@@ -1,6 +1,6 @@
 
-//const API_URL = 'https://service-sgpp.fly.dev/api/v1';
-const API_URL = 'http://localhost:9999/api/v1';
+const API_URL = 'https://service-sgpp.fly.dev/api/v1';
+//const API_URL = 'http://localhost:9999/api/v1';
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 

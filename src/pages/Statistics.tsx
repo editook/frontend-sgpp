@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import {
-    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import { scaleQuantile } from 'd3-scale';
 import api from '../services/api';
-import { Activity, Clock, CheckCircle, Package } from 'lucide-react';
+import { Activity, Clock, CheckCircle, Package, Users } from 'lucide-react';
 
-// Usamos el geojson descargado localmente desde geoBoundaries.org con corrección de winding (d3-geo)
-const boliviaGeoJSON = `${import.meta.env.BASE_URL}/bolivia_fixed.geojson`;
+// Usamos el geojson optimizado localmente
+const boliviaGeoJSON = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/bolivia_fixed.geojson?v=3`;
 
-const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+const COLORS = ['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#14b8a6'];
 const MAP_COLORS = ['#e0e7ff', '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca'];
 
 const DEP_CENTERS: Record<string, [number, number]> = {
@@ -38,7 +38,12 @@ export default function Statistics() {
     }, []);
 
     if (loading || !stats) {
-        return <div className="p-8 text-center text-gray-500">Cargando métricas...</div>;
+        return (
+            <div className="flex items-center justify-center p-16 text-gray-500">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mr-3"></div>
+                <span>Cargando métricas y estadísticas...</span>
+            </div>
+        );
     }
 
     // Calcular escala de colores para el mapa interactivo
@@ -48,6 +53,14 @@ export default function Statistics() {
 
     const totalCasesMap = stats.por_departamento.reduce((acc: number, curr: any) => acc + curr.value, 0);
 
+    // Ordenar peritos de mayor a menor según cantidad de casos
+    const sortedPeritos = [...(stats.por_perito || [])].sort((a: any, b: any) => (b.value || 0) - (a.value || 0));
+
+    const getDepColor = (val?: number) => {
+        if (!val || val === 0) return "#e2e8f0";
+        return colorScale(val);
+    };
+
     return (
         <div className="py-6 animate-fade-in space-y-6">
             <div className="mb-6">
@@ -55,9 +68,9 @@ export default function Statistics() {
                 <p className="text-gray-500 text-sm mt-1">Supervisión en tiempo real del desempeño de casos a nivel nacional.</p>
             </div>
 
-            {/* KPIs */}
+            {/* KPIs Principales */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
                     <div>
                         <p className="text-sm font-medium text-gray-500">Total de Casos</p>
                         <h3 className="text-3xl font-bold text-gray-800 mt-1">{stats.kpis.total}</h3>
@@ -66,7 +79,7 @@ export default function Statistics() {
                         <Package size={24} />
                     </div>
                 </div>
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
                     <div>
                         <p className="text-sm font-medium text-gray-500">Casos Activos</p>
                         <h3 className="text-3xl font-bold text-blue-600 mt-1">{stats.kpis.activos}</h3>
@@ -75,7 +88,7 @@ export default function Statistics() {
                         <Activity size={24} />
                     </div>
                 </div>
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
                     <div>
                         <p className="text-sm font-medium text-gray-500">Casos Cerrados</p>
                         <h3 className="text-3xl font-bold text-emerald-600 mt-1">{stats.kpis.cerrados}</h3>
@@ -84,7 +97,7 @@ export default function Statistics() {
                         <CheckCircle size={24} />
                     </div>
                 </div>
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
                     <div>
                         <p className="text-sm font-medium text-gray-500">Con Retraso</p>
                         <h3 className="text-3xl font-bold text-red-600 mt-1">{stats.kpis.con_retraso}</h3>
@@ -95,13 +108,17 @@ export default function Statistics() {
                 </div>
             </div>
 
-            {/* Principal Charts Structure */}
+            {/* Fila 1: Mapa de Bolivia y Top Delitos */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* Mapa de Calor de Bolivia (Toma 2 columnas) */}
+                {/* Mapa de Calor de Bolivia (2 columnas) */}
                 <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Densidad de Casos por Departamento</h3>
-                    <div className="h-[400px] flex justify-center items-center bg-gray-50/50 rounded-xl">
+                    <div className="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800">Densidad de Casos por Departamento</h3>
+                            <p className="text-xs text-gray-500">Distribución geográfica a nivel nacional</p>
+                        </div>
+                    </div>
+                    <div className="h-[380px] flex justify-center items-center bg-gray-50/50 rounded-xl">
                         <ComposableMap
                             projection="geoMercator"
                             width={600}
@@ -112,12 +129,11 @@ export default function Statistics() {
                             <Geographies geography={boliviaGeoJSON}>
                                 {({ geographies }) =>
                                     geographies.map((geo) => {
-                                        // geoBoundaries utiliza "shapeName" para referirse al departamento
                                         const geoName = geo.properties.shapeName || geo.properties.name || '';
                                         const d = stats.por_departamento.find((s: any) =>
                                             s.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === geoName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                                         );
-                                        const color = d ? colorScale(d.value) : "#cbd5e1"; // color gris por defecto si no hay casos
+                                        const color = getDepColor(d?.value);
 
                                         return (
                                             <Geography
@@ -128,7 +144,7 @@ export default function Statistics() {
                                                 strokeWidth={1.5}
                                                 style={{
                                                     default: { outline: "none" },
-                                                    hover: { fill: "#6366f1", outline: "none", cursor: 'pointer', opacity: 0.9 },
+                                                    hover: { fill: "#4f46e5", outline: "none", cursor: 'pointer', opacity: 0.9 },
                                                     pressed: { outline: "none" }
                                                 }}
                                             />
@@ -164,18 +180,19 @@ export default function Statistics() {
                     </div>
                 </div>
 
-                {/* Donut Chart: Tipo de Delitos */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Top Delitos</h3>
-                    <div className="h-[400px]">
+                {/* Donut Chart: Tipo de Delitos (1 columna) */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col">
+                    <h3 className="text-lg font-bold text-gray-800 mb-1">Top Delitos</h3>
+                    <p className="text-xs text-gray-500 mb-4">Clasificación por tipo de caso</p>
+                    <div className="h-[340px] grow">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={stats.por_delito}
                                     cx="50%"
-                                    cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={120}
+                                    cy="48%"
+                                    innerRadius={70}
+                                    outerRadius={110}
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
@@ -184,56 +201,70 @@ export default function Statistics() {
                                     ))}
                                 </Pie>
                                 <RechartsTooltip formatter={(value: any) => [value, 'Casos']} />
-                                <Legend verticalAlign="bottom" height={36} />
+                                <Legend verticalAlign="bottom" height={40} wrapperStyle={{ fontSize: '11px' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
-
             </div>
 
-            {/* Secction 2: Timeline and Peritos */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Timeline Line Chart */}
-                <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Ingreso Histórico de Casos (Timeline)</h3>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={stats.timeline} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: '#6B7280' }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280' }} />
-                                <RechartsTooltip
-                                    cursor={{ stroke: '#F3F4F6', strokeWidth: 2 }}
-                                    contentStyle={{ borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Line type="monotone" dataKey="cantidad" name="Casos" stroke="#4f46e5" strokeWidth={3} dot={{ r: 4, fill: '#4f46e5', strokeWidth: 2, stroke: '#ffffff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
+            {/* Fila 2: Distribución de Casos por Perito (Gráfica Completa Ordenada de Mayor a Menor) */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                            <Users size={22} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800">Distribución de Casos por Perito</h3>
+                            <p className="text-xs text-gray-500">Casos asignados organizados de mayor a menor</p>
+                        </div>
                     </div>
+                    <span className="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full self-start sm:self-auto">
+                        {sortedPeritos.length} {sortedPeritos.length === 1 ? 'Perito' : 'Peritos'}
+                    </span>
                 </div>
 
-                {/* Casos por Perito Bar Chart */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Casos por Perito</h3>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={stats.por_perito} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB" />
-                                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#6B7280' }} />
-                                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 12 }} width={80} />
-                                <RechartsTooltip
-                                    cursor={{ fill: '#F3F4F6' }}
-                                    contentStyle={{ borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Bar dataKey="value" name="Casos asignados" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20}>
-                                    {stats.por_perito?.map((_entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                <div className="w-full h-[360px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                            data={sortedPeritos} 
+                            layout="vertical" 
+                            margin={{ top: 10, right: 40, left: 20, bottom: 10 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#F1F5F9" />
+                            <XAxis 
+                                type="number" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fill: '#64748B', fontSize: 12 }} 
+                                allowDecimals={false}
+                            />
+                            <YAxis 
+                                type="category" 
+                                dataKey="name" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fill: '#1E293B', fontSize: 13, fontWeight: 600 }} 
+                                width={180} 
+                            />
+                            <RechartsTooltip
+                                cursor={{ fill: '#F8FAFC' }}
+                                contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                formatter={(value: any) => [`${value} caso(s)`, 'Casos Asignados']}
+                            />
+                            <Bar 
+                                dataKey="value" 
+                                name="Casos asignados" 
+                                radius={[0, 8, 8, 0]} 
+                                barSize={28}
+                            >
+                                {sortedPeritos.map((_entry: any, index: number) => (
+                                    <Cell key={`cell-perito-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
